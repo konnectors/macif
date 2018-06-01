@@ -91,15 +91,13 @@ async function authenticate(login, password) {
         error = new Error('LOGIN_FAILED')
       }
     } catch (e) {
-      // Empty catch but not a problem since we handle this below
+      error = new Error('LOGIN_FAILED.PARSE_RESPONSE_ERROR')
     }
     if (error) {
       throw error
     } else {
       log('error', e.error || e.message || e)
       throw new Error('UNKNOWN_ERROR')
-    }
-
     }
   }
 
