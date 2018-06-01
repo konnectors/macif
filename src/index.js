@@ -65,19 +65,43 @@ async function authenticate(login, password) {
     password: password
   })
   log('info', 'Logging in...')
-  await rq({
-    url: 'https://www.macif.fr/cms/ajax/login?' + qs,
-    headers: {
-      Origin: 'https://www.macif.fr',
-      'User-Agent': userAgent,
-      'Content-Type': 'application/x-www-form-urlencoded',
-      Accept: 'application/json, text/plain, */*',
-      'Cache-Control': 'no-cache',
-      'X-Code-Application': '1880',
-      'X-JS-LOADING': 'loading_authorized',
-      'X-No-Struct': '324'
+  try {
+    await rq({
+      url: 'https://www.macif.fr/cms/ajax/login?' + qs,
+      headers: {
+        Origin: 'https://www.macif.fr',
+        'User-Agent': userAgent,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Accept: 'application/json, text/plain, */*',
+        'Cache-Control': 'no-cache',
+        'X-Code-Application': '1880',
+        'X-JS-LOADING': 'loading_authorized',
+        'X-No-Struct': '324'
+      }
+    })
+  } catch (e) {
+    let error
+    try {
+      const data = JSON.parse(e.error)
+      if (
+        data.errors &&
+        data.errors.length > 0 &&
+        data.errors[0].message.includes('Identifiant ou mot de passe incorrect')
+      ) {
+        error = new Error('LOGIN_FAILED')
+      }
+    } catch (e) {
+      // Empty catch but not a problem since we handle this below
     }
-  })
+    if (error) {
+      throw error
+    } else {
+      log('error', e.error || e.message || e)
+      throw new Error('UNKNOWN_ERROR')
+    }
+
+    }
+  }
 
   userId = getCookie('noprs').value
   token = getCookie('token').value
