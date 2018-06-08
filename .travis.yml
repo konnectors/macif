@@ -1,0 +1,41 @@
+language: node_js
+node_js:
+- '8'
+env:
+  global:
+  - GH_USER_EMAIL="travis@example.org"
+  - GH_USER_NAME="cozy-bot"
+  - DEPLOY_REPOSITORY="git@github.com:konnectors/macif.git"
+  - secure: QO7O6MxwpLpoESJ8XB7VbpbseseDBXUhpaCrt8DJGd9Ygm409zL6nOnVlsr+3dsHFajTwSmvZRRDvKp09/9wpPEZAm2LyunrixiR67lkI+tPS7OAsmua8B9DLXJVA1tI+ccb1mKTOU8d9Uv2APovR4sVAv37WGoauaXhzAc2fqn4eHg/xasCXDEV+N7NTNthCeAPoo3+heij414nuwulL3Dv+z0oqM+iMF64dpS1CydVoPxXeLXATjBFeK7Vq0SZoUHAqI/e2zcHWlfkR4TU6uMZ9eIcQDREiieD1/WBs9yqdZSoIGcBzbM2LHlr5hmrFyR/Rjzk2ZxAX80dB5SxRCmteWSDONfoKt8LgIgZHP35mYehXXAwf/nRV/D9+AgnNo2eWzKuEOZgxPTlsnuZ+vbSvHyc+OMuJ7fo96CMhi4g3F/6AKSy/sJNoE36AfDVF46tR4MFqJ0X46hAAY4hSIHzTp4oLCOLYF007avmV+hnsWPG2t1oiyjNJDBlouypsHv3QdUmsLgKsOoe2zHZ7s2l4H2i5df0Uvun1W4CW8w3MxfDyRb9pNjRrOG0UvSbsrLQzNuXhlIhcX3Kr1tgvcFEvbLCnhiD+IDpwekUMUXfL8AUWtacGuxnFgdigLWA2PfpSGkgtGV0LTGhEO6Xv7EEMAzivCrN54RQImDfPGo=
+cache:
+  yarn: true
+  directories:
+  - node_modules
+branches:
+  except:
+  - build
+  - latest
+script:
+- yarn lint
+- yarn build
+- yarn run check
+deploy:
+- provider: script
+  skip-cleanup: true
+  script: DEPLOY_BRANCH=build yarn deploy && yarn cozyPublish
+  on:
+    branch: master
+- provider: script
+  skip-cleanup: true
+  script: DEPLOY_BRANCH=build yarn deploy && yarn cozyPublish
+  on:
+    tags: true
+before_install:
+- openssl aes-256-cbc -K $encrypted_da6161462fce_key -iv $encrypted_da6161462fce_iv
+  -in github_deploy_key.enc -out /tmp/github_deploy_key -d
+- eval "$(ssh-agent -s)"
+- chmod 600 /tmp/github_deploy_key
+- ssh-add /tmp/github_deploy_key
+after_deploy:
+- rm /tmp/github_deploy_key
+- ssh-add -D
