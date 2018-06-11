@@ -20,12 +20,16 @@ async function start(fields) {
   const insuranceCertificates = await fetchInsuranceCertificates()
   const payments = await fetchPayments()
   await saveBills(payments, fields, {
-    identifiers: ['MACIF']
-  })
-  await saveFiles([...paymentNotices, ...insuranceCertificates], {
-    folderPath: fields.folderPath,
+    identifiers: ['MACIF'],
     contentType: 'application/pdf'
   })
+  await saveFiles(
+    [...paymentNotices, ...insuranceCertificates],
+    fields.folderPath,
+    {
+      contentType: 'application/pdf'
+    }
+  )
 }
 
 // this shows authentication using the [signin function](https://github.com/konnectors/libs/blob/master/packages/cozy-konnector-libs/docs/api.md#module_signin)
