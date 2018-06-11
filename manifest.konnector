@@ -1,6 +1,6 @@
 {
-  "version": "1.0.0",
-  "name": "MACIF Connector",
+  "version": "1.0.1",
+  "name": "MACIF",
   "type": "konnector",
   "language": "node",
   "icon": "icon.png",

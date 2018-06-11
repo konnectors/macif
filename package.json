@@ -1,6 +1,6 @@
 {
   "name": "macif",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "repository": {
     "type": "git",
@@ -35,7 +35,7 @@
   },
   "dependencies": {
     "cozy-konnector-libs": "4.5.2",
-    "request-promise-native": "^1.0.5"
+    "request-promise-native": "1.0.5"
   },
   "devDependencies": {
     "copy-webpack-plugin": "4.5.1",
