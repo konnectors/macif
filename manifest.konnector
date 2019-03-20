@@ -5,7 +5,7 @@
   "language": "node",
   "icon": "icon.png",
   "slug": "macif",
-  "source": "https://github.com/konnectors/macif.git",
+  "source": "git@github.com:konnectors/macif.git",
   "editor": "cozy",
   "vendor_link": "https://www.macif.fr/assurance/particuliers",
   "categories": [
