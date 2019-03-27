@@ -13,7 +13,7 @@ const baseUrl = 'https://www.macif.fr'
 const getCookie = key => find(jar.getCookies(baseUrl), x => x.key === key)
 
 const userAgent =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
+  'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0 Cozycloud'
 
 const jar = request.jar()
 const rq = request.defaults({ jar })
@@ -26,7 +26,10 @@ const lib = {}
 lib.setupCookies = async () => {
   await rq({
     url:
-      'https://www.macif.fr/assurance/particuliers/vos-espaces-macif/espace-assurance'
+    'https://www.macif.fr/assurance/particuliers/vos-espaces-macif/espace-assurance',
+    headers: {
+      'User-Agent': userAgent
+    }
   })
 }
 
@@ -113,7 +116,7 @@ lib.authorizedRequest = async options => {
       Pragma: 'no-cache',
       // necessary otherwise the server cuts the connexion
       'User-Agent':
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
+        userAgent
     }
   }
   return rq(finalOptions)
