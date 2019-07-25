@@ -26,7 +26,7 @@ const lib = {}
 lib.setupCookies = async () => {
   await rq({
     url:
-    'https://www.macif.fr/assurance/particuliers/vos-espaces-macif/espace-assurance',
+      'https://www.macif.fr/assurance/particuliers/vos-espaces-macif/espace-assurance',
     headers: {
       'User-Agent': userAgent
     }
@@ -115,8 +115,7 @@ lib.authorizedRequest = async options => {
       Connection: 'keep-alive',
       Pragma: 'no-cache',
       // necessary otherwise the server cuts the connexion
-      'User-Agent':
-        userAgent
+      'User-Agent': userAgent
     }
   }
   return rq(finalOptions)
