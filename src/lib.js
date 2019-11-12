@@ -84,17 +84,13 @@ lib.login = async (login, password) => {
 
 lib.fetchInsuranceCertificates = () => {
   return lib.authorizedRequest({
-    url: `https://ssm.macif.fr/internet-contrat-rest/personnes/${
-      lib.userId
-    }/attestations`
+    url: `https://ssm.macif.fr/internet-contrat-rest/personnes/${lib.userId}/attestations`
   })
 }
 
 lib.fetchPaymentNotices = () => {
   return lib.authorizedRequest({
-    url: `https://ssm.macif.fr/internet-espaceclient-rest/personnes/${
-      lib.userId
-    }/document/avisecheance`
+    url: `https://ssm.macif.fr/internet-espaceclient-rest/personnes/${lib.userId}/document/avisecheance`
   })
 }
 
@@ -141,14 +137,10 @@ lib.parseInsuranceCertificates = insuranceCertificatesPayload => {
           znNmAttestation: insuranceCertificate.znNmAttestation,
           token: lib.token
         })
-        const url = `https://ssm.macif.fr/internet-contrat-rest/personnes/${
-          lib.userId
-        }/attestations/_telecharger_attestation?${qs}`
+        const url = `https://ssm.macif.fr/internet-contrat-rest/personnes/${lib.userId}/attestations/_telecharger_attestation?${qs}`
         return {
           filestream: lib.downloadFile(url),
-          filename: `MACIF Attestation ${
-            insuranceCertificate.znNmAttestation
-          } ${info.noOrdreContrat}.pdf`
+          filename: `MACIF Attestation ${insuranceCertificate.znNmAttestation} ${info.noOrdreContrat}.pdf`
         }
       })
     })
@@ -161,9 +153,7 @@ lib.parsePaymentNotices = paymentNoticesPayload => {
   return paymentNotices.map(paymentNotice => {
     const date = paymentNotice.dtAvisEcheance.slice(0, 10)
     const ref = paymentNotice.znRefPublicDocElec
-    const url = `https://ssm.macif.fr/internet-espaceclient-rest/personnes/${
-      lib.userId
-    }/document/avisecheance/${ref}?token=${lib.token}`
+    const url = `https://ssm.macif.fr/internet-espaceclient-rest/personnes/${lib.userId}/document/avisecheance/${ref}?token=${lib.token}`
     log('info', `Downloading payment notice for ${date} (${url})...`)
     return {
       filename: `MACIF Echeance ${date}.pdf`,
