@@ -1,11 +1,9 @@
 language: node_js
 node_js:
-- '8'
+- '12'
 env:
   global:
-  - GH_USER_EMAIL="travis@example.org"
-  - GH_USER_NAME="cozy-bot"
-  - DEPLOY_REPOSITORY="git@github.com:konnectors/macif.git"
+  # REGISTRY_TOKEN(editor=cozy, app=macif)
   - secure: TDmnv8k3CILLSkO2l9MKCWdfe6AIGJkkI+CfTH9Q14egwXjBHN9u4rtaJAGZ8WLUalPupw1MXujRJmACA5N1logHJji333TVLAI8Wwm8Wn1mt9Is0fdskQ7Ca2vbK8SRtzj5E6u1qx1wBq01645k7y6UIyLr0YoADS9BD1cEfS8tEQj7HdmPlzok7rR3co/EDM8oW8Js4MoHxx6u6QQWCVfh50TwTJGlu4RE9zpxAK29bCl/KYvWgRy9YKAwUBxfM2RCEOUug5f3gcPsFl+jvhQvWDojVTY24vLJI1vo+LNIwPvKoQr1kjsKrqV0hmj4j3golyjIY/0k4A7+IqFwY1OLIlGWxUjOW1uUbW35TuV/x0GgdzPzyaQjd0nokK/AQim7GBJHtvRqUuHPmmPYFpveN1/nwSJi8nye/RRgv3X4SnE45c45CqV4Hx8f4SSriC43Ngx8ZswPVtfNPSShYsRn0s05QQTCyxpalLwA6Q7AbDMUsyJCPlpBEMs+MWXG4+7mWSm2fMknaquRccS9Ea7JfIJu/gNlpEHdA/qQHkEbA6scsE7wp8Jb+qTq7xzCfxW0+oG1YpSdFRo1v8n+RFvF/aXOWaDkQYPjIhHesfUViePemUp4Pv97OKQ4IeoT3pLjhy7xR1mv9QSmrKaWv2Dat9ZfgdUPw4vXSiN4/MQ=
 cache:
   yarn: true
@@ -18,7 +16,6 @@ branches:
 script:
 - yarn lint
 - yarn build
-- yarn run check
 deploy:
 - provider: script
   skip-cleanup: true
