@@ -1,84 +1,69 @@
 {
-  "version": "1.3.0",
+  "version": "2.0.0",
   "name": "MACIF",
   "type": "konnector",
   "language": "node",
   "icon": "icon.png",
   "slug": "macif",
   "source": "git@github.com:konnectors/macif.git",
-  "editor": "cozy",
-  "vendor_link": "https://www.macif.fr/assurance/particuliers",
+  "editor": "Cozy",
+  "vendor_link": "https://www.macif.fr/",
   "categories": [
     "insurance"
   ],
-  "fields": {
-    "login": {
-      "type": "text"
-    },
-    "password": {
-      "type": "password"
-    },
-    "advancedFields": {
-      "folderPath": {
-        "advanced": true,
-        "isRequired": false
-      }
-    }
-  },
-  "data_types": [
-    "bill"
+  "fields": { },
+  "clientSide": true,
+  "langs": [
+    "fr"
   ],
-  "screenshots": [],
+  "folders": [
+    {
+      "defaultDir": "$administrative/$konnector/$account"
+    }
+  ],
   "permissions": {
-    "bank operations": {
-      "type": "io.cozy.bank.operations"
-    },
     "bills": {
       "type": "io.cozy.bills"
     },
     "files": {
       "type": "io.cozy.files"
     },
-    "accounts": {
-      "type": "io.cozy.accounts",
-      "verbs": [
-        "GET"
-      ]
+    "carbon_copy": {
+      "type": "io.cozy.certified.carbon_copy"
+    },
+    "identities": {
+      "type": "io.cozy.identities"
     }
   },
   "developer": {
     "name": "Cozy Cloud",
     "url": "https://cozy.io"
   },
-  "langs": [
-    "fr",
-    "en"
-  ],
   "locales": {
     "fr": {
-      "short_description": "Connecteur pour l'assurance MACIF",
-      "long_description": "Récupère les factures pour l'assurance MACIF",
+      "short_description": "Récupère vos factures MACIF.",
+      "long_description": "Récupère vos factures MACIF.",
       "permissions": {
-        "bank operations": {
-          "description": "Utilisé pour relier les factures à des operations bancaires"
+        "carboncopy": {
+          "description": "Utilisé pour certifier que vos fichiers sont copie conforme avec les documents d'origine"
         },
         "bills": {
           "description": "Utilisé pour sauver les données des factures"
         },
         "files": {
-          "description": "Utilisé pour sauver les fichiers"
+          "description": "Utilisé pour sauvegarder les factures"
         },
-        "accounts": {
-          "description": "Utilisé pour obtenir les données du compte"
+        "identities": {
+          "description": "Utilisé pour sauvegarder l'identité de l'utilisateur"
         }
       }
     },
     "en": {
-      "short_description": "Connector for the MACIF French insurance",
-      "long_description": "Retrieves bills from the MACIF French insurance",
+      "short_description": "Fetch a list of MACIF invoices.",
+      "long_description": "Fetch a list of MACIF invoices.",
       "permissions": {
-        "bank operations": {
-          "description": "Required to link bank operations to bills"
+        "carboncopy": {
+          "description": "Required for carbon copy documents"
         },
         "bills": {
           "description": "Required to save the bills data"
@@ -86,12 +71,21 @@
         "files": {
           "description": "Required to save the bills"
         },
-        "accounts": {
-          "description": "Required to get the account's data"
+        "identities": {
+          "description": "Required to save the user identity"
         }
       }
     }
   },
-  "banksTransactionRegExp": "\\bmacif\\b",
-  "manifest_version": "2"
+  "qualification_labels": [
+    "house_insurance",
+    "car_insurance",
+    "house_insurance",
+    "health_insurance_card"
+  ],
+  "features": [
+    "METADATA_DEDUP",
+    "CARBON_COPY",
+    "DOC_QUALIFICATION_V2"
+  ]
 }
