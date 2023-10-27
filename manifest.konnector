@@ -78,10 +78,7 @@
     }
   },
   "qualification_labels": [
-    "house_insurance",
-    "car_insurance",
-    "house_insurance",
-    "health_insurance_card"
+    "car_insurance"
   ],
   "features": [
     "METADATA_DEDUP",
