@@ -1,15 +1,17 @@
 import { ContentScript } from 'cozy-clisk/dist/contentscript'
 import Minilog from '@cozy/minilog'
 import waitFor, { TimeoutError } from 'p-wait-for'
+import { parse } from 'date-fns'
 const log = Minilog('ContentScript')
 Minilog.enable('macifCCC')
 
 const baseUrl = 'https://www.macif.fr'
+// let FORCE_FETCH_ALL = false
 
 const personnalInfos = []
 const personIdentity = []
 const attestationsInfos = []
-const billsInfos = []
+const schedulesInfos = []
 
 var openProxied = window.XMLHttpRequest.prototype.open
 window.XMLHttpRequest.prototype.open = function () {
@@ -33,6 +35,47 @@ window.XMLHttpRequest.prototype.open = function () {
     return openProxied.apply(this, [].slice.call(arguments))
   }
   return openProxied.apply(this, [].slice.call(arguments))
+}
+
+const fetchOriginal = window.fetch
+window.fetch = async (...args) => {
+  const response = await fetchOriginal(...args)
+  if (
+    args[0].url &&
+    args[0].url === 'https://ssm.macif.fr/internet-contrat-rest/v2/attestations'
+  ) {
+    await response
+      .clone()
+      .json()
+      .then(body => {
+        attestationsInfos.push(body)
+        return response
+      })
+      .catch(err => {
+        // eslint-disable-next-line no-console
+        console.log(err)
+        return response
+      })
+  }
+  if (
+    args[0].url &&
+    args[0].url ===
+      'https://ssm.macif.fr/internet-espaceclient-rest/personnes/1/document/avisecheance'
+  ) {
+    await response
+      .clone()
+      .json()
+      .then(body => {
+        schedulesInfos.push(body)
+        return response
+      })
+      .catch(err => {
+        // eslint-disable-next-line no-console
+        console.log(err)
+        return response
+      })
+  }
+  return response
 }
 
 class MacifContentScript extends ContentScript {
@@ -144,8 +187,11 @@ class MacifContentScript extends ContentScript {
     }
   }
 
-  async fetch() {
+  async fetch(context) {
     this.log('info', '🤖 fetch')
+    // For now with the account we use to develop, it has been decide to not use FORCE_FETCH_ALL as the execution is pretty quick in every case
+    // Keeping this around for later use, when we'll get more use cases with other accounts.
+    // await this.determineForceFetchAll(context)
     if (this.store.userCredentials) {
       this.log('info', 'Saving credentials ...')
       await this.saveCredentials(this.store.userCredentials)
@@ -154,7 +200,49 @@ class MacifContentScript extends ContentScript {
       this.log('info', 'Saving identity ...')
       await this.saveIdentity({ contact: this.store.userIdentity })
     }
-    await this.waitForElementInWorker('[pause]')
+    await this.navigateToBillsPage()
+    await this.runInWorkerUntilTrue({
+      method: 'checkInterceptions',
+      args: ['attestations']
+    })
+    const { carAttestations, otherAttestations } = await this.runInWorker(
+      'getAttestations'
+    )
+    // Here we cannot use Promise.all because we're creating the subPath with both functions
+    // at the same time approx. leading to conflicts. Doing so, the subPath creation is done just once
+    await this.saveFiles(carAttestations, {
+      context,
+      contentType: 'application/pdf',
+      fileIdAttributes: ['filename'],
+      qualificationLabel: 'car_insurance',
+      subPath: 'Attestations'
+    })
+    await this.saveFiles(otherAttestations, {
+      context,
+      contentType: 'application/pdf',
+      fileIdAttributes: ['filename'],
+      // Cannot find an appropriate qualifications, has to be discuss
+      subPath: 'Attestations'
+    })
+    await this.runInWorkerUntilTrue({
+      method: 'checkInterceptions',
+      args: ['schedules']
+    })
+    const allSchedules = await this.runInWorker('getPaymentSchedules')
+    // The page we reach here is to be on the same domain as the fileurl we get for downloading
+    // It is expected to get an error in the HTML of this page, "missing ressource" or "bad request"
+    // but it is on purpose, otherwise, schedules downloads cannot be achieved
+    await this.goto(
+      'https://ssm.macif.fr/internet-espaceclient-rest/personnes/'
+    )
+    await this.runInWorkerUntilTrue({ method: 'checkDomainChange' })
+    await this.saveFiles(allSchedules, {
+      context,
+      contentType: 'application/pdf',
+      fileIdAttributes: ['filename'],
+      qualificationLabel: 'other_invoice',
+      subPath: "Avis d'échéances"
+    })
   }
 
   async checkInterceptions(option) {
@@ -163,6 +251,12 @@ class MacifContentScript extends ContentScript {
       () => {
         if (option === 'personnalInfos') {
           return Boolean(personnalInfos.length > 0 && personIdentity.length > 0)
+        }
+        if (option === 'attestations') {
+          return Boolean(attestationsInfos.length > 0)
+        }
+        if (option === 'schedules') {
+          return Boolean(schedulesInfos.length > 0)
         }
       },
       {
@@ -192,10 +286,6 @@ class MacifContentScript extends ContentScript {
       address: this.getAddresses(infos.adresses),
       phone: this.getPhones(infos.telephones)
     }
-    this.log(
-      'info',
-      `getIdentity - userIdentity : ${JSON.stringify(userIdentity)}`
-    )
     await this.sendToPilot({ userIdentity })
   }
 
@@ -274,13 +364,162 @@ class MacifContentScript extends ContentScript {
     }
     return allPhones
   }
+
+  // async determineForceFetchAll(context) {
+  //   this.log('info', '📍️ determineForceFetchAll starts')
+  //   const { trigger } = context
+  //   const isLastJobError =
+  //     trigger.current_state?.last_failure > trigger.current_state?.last_success
+  //   const hasLastExecution = Boolean(trigger.current_state?.last_execution)
+  //   const distanceInDays = getDateDistanceInDays(
+  //     trigger.current_state?.last_execution
+  //   )
+  //   if (distanceInDays >= 30 || !hasLastExecution || isLastJobError) {
+  //     this.log('debug', `isLastJobError: ${isLastJobError}`)
+  //     this.log('debug', `distanceInDays: ${distanceInDays}`)
+  //     this.log('debug', `hasLastExecution: ${hasLastExecution}`)
+  //     FORCE_FETCH_ALL = true
+  //   }
+  // }
+
+  async navigateToBillsPage() {
+    this.log('info', '📍️ navigateToBillsPage starts')
+    await this.runInWorker(
+      'click',
+      'a[href="/assurance/particuliers/vos-espaces-macif/espace-assurance/documents"]'
+    )
+    await Promise.all([
+      this.waitForElementInWorker('#avisecheances'),
+      this.waitForElementInWorker('#attestations')
+    ])
+  }
+
+  async getAttestations() {
+    this.log('info', '📍️ getAttestations starts')
+    const allAttestationsInfos = attestationsInfos[0].data
+    const carAttestations = []
+    const otherAttestations = []
+    for (const attestations of allAttestationsInfos) {
+      const attestationsForOneType = []
+      for (const oneAttestation of attestations.listeAttestations) {
+        const type = attestations.libelle
+        const filename = `${
+          oneAttestation.liAttestSoc
+        }_MACIF_${oneAttestation.libelle.replace(/ /g, '-')}.pdf`
+        const fileurl = `${baseUrl}${oneAttestation.lien}`
+        const attestation = {
+          documentType: type,
+          filename,
+          fileurl,
+          shouldReplaceFile: () => true,
+          date: new Date(),
+          vendor: 'MACIF',
+          fileAttributes: {
+            metadata: {
+              contentAuthor: 'macif',
+              issueDate: new Date(),
+              datetime: new Date(),
+              datetimeLabel: 'issueDate',
+              carbonCopy: true
+            }
+          }
+        }
+        attestationsForOneType.push(attestation)
+      }
+      if (
+        attestationsForOneType[0]?.documentType
+          .toLowerCase()
+          .includes('véhicule')
+      ) {
+        carAttestations.push(...attestationsForOneType)
+      } else {
+        otherAttestations.push(...attestationsForOneType)
+      }
+    }
+    return { carAttestations, otherAttestations }
+  }
+
+  async getPaymentSchedules() {
+    this.log('info', '📍️ getPaymentSchedules starts')
+    const foundPaymentSchedules = document.querySelectorAll(
+      'a[href*="https://ssm.macif.fr/internet-espaceclient-rest/personnes/1/document/avisecheance/"]'
+    )
+    const allPaymentSchedules = []
+    for (const paymentSchedule of foundPaymentSchedules) {
+      const titleAndDateElements = paymentSchedule.querySelectorAll('p')
+      this.log(
+        'info',
+        `titleAndDateElements.length : ${titleAndDateElements.length}`
+      )
+      const fileTitle = titleAndDateElements[0].textContent
+      const foundDate = titleAndDateElements[1].textContent
+      const parsedDate = parse(foundDate, 'dd/MM/yyyy', new Date())
+      const fileurl = paymentSchedule.getAttribute('href')
+      const vendorRef = fileurl.split('/').pop()
+      const filename = `${fileTitle}_MACIF.pdf`
+      const onePaymentSchedule = {
+        filename,
+        vendorRef,
+        date: parsedDate,
+        fileurl,
+        fileIdAttributes: ['vendorRef'],
+        vendor: 'MACIF',
+        fileAttributes: {
+          metadata: {
+            contentAuthor: 'macif.fr',
+            issueDate: new Date(),
+            datetime: parsedDate,
+            datetimeLabel: 'issueDate',
+            isSubscription: true,
+            carbonCopy: true
+          }
+        }
+      }
+      allPaymentSchedules.push(onePaymentSchedule)
+    }
+    return allPaymentSchedules
+  }
+
+  async checkDomainChange() {
+    this.log('info', '📍️ checkDomainChange starts')
+    await waitFor(
+      () => {
+        const titleElement = document.querySelector('h1')
+        if (
+          titleElement?.textContent.includes('Requête') ||
+          titleElement?.textContent.includes('Ressource')
+        ) {
+          return true
+        } else {
+          return false
+        }
+      },
+      {
+        interval: 1000,
+        timeout: 30 * 1000
+      }
+    )
+    return true
+  }
 }
 
 const connector = new MacifContentScript()
 connector
   .init({
-    additionalExposedMethodsNames: ['checkInterceptions', 'getIdentity']
+    additionalExposedMethodsNames: [
+      'checkInterceptions',
+      'getIdentity',
+      'getAttestations',
+      'getPaymentSchedules',
+      'checkDomainChange'
+    ]
   })
   .catch(err => {
     log.warn(err)
   })
+// This function comes with the determineForceFetchAll function, actually not in use.
+// function getDateDistanceInDays(dateString) {
+//   const distanceMs = Date.now() - new Date(dateString).getTime()
+//   const days = 1000 * 60 * 60 * 24
+//   return Math.floor(distanceMs / days)
+// }
