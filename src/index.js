@@ -194,7 +194,6 @@ class MacifContentScript extends ContentScript {
       } else {
         await this.showLoginFormAndWaitForAuthentication()
       }
-      await this.showLoginFormAndWaitForAuthentication()
     }
     if (
       (await this.isElementInWorker('.auth-factor')) ||
