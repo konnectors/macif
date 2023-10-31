@@ -2,81 +2,18 @@ import { ContentScript } from 'cozy-clisk/dist/contentscript'
 import Minilog from '@cozy/minilog'
 import waitFor, { TimeoutError } from 'p-wait-for'
 import { parse } from 'date-fns'
+import XHRInterceptor from './XHRinterceptor'
+import FetchInterceptor from './fetchInterceptor'
 const log = Minilog('ContentScript')
 Minilog.enable('macifCCC')
 
 const baseUrl = 'https://www.macif.fr'
 // let FORCE_FETCH_ALL = false
 
-const personnalInfos = []
-const personIdentity = []
-const attestationsInfos = []
-const schedulesInfos = []
-
-var openProxied = window.XMLHttpRequest.prototype.open
-window.XMLHttpRequest.prototype.open = function () {
-  var originalResponse = this
-  if (arguments[1].includes('/espace-client/contacts/macif')) {
-    originalResponse.addEventListener('readystatechange', function () {
-      if (originalResponse.readyState === 4) {
-        const jsonInfos = JSON.parse(originalResponse.responseText)
-        personnalInfos.push(jsonInfos)
-      }
-    })
-    return openProxied.apply(this, [].slice.call(arguments))
-  }
-  if (arguments[1].match(/\/internet-personne-rest\/personnes\/\d+/g)) {
-    originalResponse.addEventListener('readystatechange', function () {
-      if (originalResponse.readyState === 4) {
-        const jsonInfos = JSON.parse(originalResponse.responseText)
-        personIdentity.push(jsonInfos)
-      }
-    })
-    return openProxied.apply(this, [].slice.call(arguments))
-  }
-  return openProxied.apply(this, [].slice.call(arguments))
-}
-
-const fetchOriginal = window.fetch
-window.fetch = async (...args) => {
-  const response = await fetchOriginal(...args)
-  if (
-    args[0].url &&
-    args[0].url === 'https://ssm.macif.fr/internet-contrat-rest/v2/attestations'
-  ) {
-    await response
-      .clone()
-      .json()
-      .then(body => {
-        attestationsInfos.push(body)
-        return response
-      })
-      .catch(err => {
-        // eslint-disable-next-line no-console
-        console.log(err)
-        return response
-      })
-  }
-  if (
-    args[0].url &&
-    args[0].url ===
-      'https://ssm.macif.fr/internet-espaceclient-rest/personnes/1/document/avisecheance'
-  ) {
-    await response
-      .clone()
-      .json()
-      .then(body => {
-        schedulesInfos.push(body)
-        return response
-      })
-      .catch(err => {
-        // eslint-disable-next-line no-console
-        console.log(err)
-        return response
-      })
-  }
-  return response
-}
+const xhrInterceptor = new XHRInterceptor()
+const fetchInterceptor = new FetchInterceptor()
+xhrInterceptor.init()
+fetchInterceptor.init()
 
 class MacifContentScript extends ContentScript {
   onWorkerReady() {
@@ -426,13 +363,16 @@ class MacifContentScript extends ContentScript {
     await waitFor(
       () => {
         if (option === 'personnalInfos') {
-          return Boolean(personnalInfos.length > 0 && personIdentity.length > 0)
+          return Boolean(
+            xhrInterceptor.personnalInfos.length > 0 &&
+              xhrInterceptor.personIdentity.length > 0
+          )
         }
         if (option === 'attestations') {
-          return Boolean(attestationsInfos.length > 0)
+          return Boolean(fetchInterceptor.attestationsInfos.length > 0)
         }
         if (option === 'schedules') {
-          return Boolean(schedulesInfos.length > 0)
+          return Boolean(fetchInterceptor.schedulesInfos.length > 0)
         }
       },
       {
@@ -451,8 +391,8 @@ class MacifContentScript extends ContentScript {
 
   async getIdentity() {
     this.log('info', '📍️ getIdentity starts')
-    const infos = personnalInfos[0].data
-    const identity = personIdentity[0].data
+    const infos = xhrInterceptor.personnalInfos[0].data
+    const identity = xhrInterceptor.personIdentity[0].data
     const userIdentity = {
       email: infos.znAdrEmail,
       name: {
@@ -572,7 +512,7 @@ class MacifContentScript extends ContentScript {
 
   async getAttestations() {
     this.log('info', '📍️ getAttestations starts')
-    const allAttestationsInfos = attestationsInfos[0].data
+    const allAttestationsInfos = fetchInterceptor.attestationsInfos[0].data
     const carAttestations = []
     const otherAttestations = []
     for (const attestations of allAttestationsInfos) {
