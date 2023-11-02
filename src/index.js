@@ -17,50 +17,16 @@ fetchInterceptor.init()
 
 class MacifContentScript extends ContentScript {
   onWorkerReady() {
-    window.addEventListener('DOMContentLoaded', () => {
-      const form = document.querySelector('form')
-      const loginError = document.querySelector('#error-login')
-      if (form) {
-        const passwordField = document.querySelector('#password')
-        const submitButton = document.querySelector(
-          'button[onclick="postOk();"]'
-        )
-        if (passwordField) {
-          passwordField.addEventListener('keypress', event => {
-            if (event === 'Enter') {
-              this.log('info', 'Keyboard Enter - emitting credentials')
-              const password = document.querySelector('#password')?.value
-              const login = document.querySelector('#username')?.value
-              if (password && login) {
-                this.bridge.emit('workerEvent', {
-                  event: 'loginSubmit',
-                  payload: { login, password }
-                })
-              }
-            }
-          })
-        }
-        if (submitButton) {
-          submitButton.addEventListener('click', () => {
-            this.log('info', 'Button click - emitting credentials')
-            const password = document.querySelector('#password')?.value
-            const login = document.querySelector('#username')?.value
-            if (password && login) {
-              this.bridge.emit('workerEvent', {
-                event: 'loginSubmit',
-                payload: { login, password }
-              })
-            }
-          })
-        }
-      }
-      if (loginError) {
-        this.bridge.emit('workerEvent', {
-          event: 'loginError',
-          payload: { msg: loginError.innerHTML }
-        })
-      }
-    })
+    if (
+      document.readyState === 'complete' ||
+      document.readyState === 'loaded'
+    ) {
+      this.setListeners()
+    } else {
+      window.addEventListener('DOMContentLoaded', () => {
+        this.setListeners()
+      })
+    }
   }
 
   onWorkerEvent({ event, payload }) {
@@ -82,6 +48,50 @@ class MacifContentScript extends ContentScript {
         'received loginError, unblocking user interactions: ' + payload?.msg
       )
       this.unblockWorkerInteractions()
+    }
+  }
+
+  setListeners() {
+    this.log('debug', '📍️ setListeners starts')
+    const form = document.querySelector('form')
+    const loginError = document.querySelector('#error-login')
+    if (form) {
+      const passwordField = document.querySelector('#password')
+      const submitButton = document.querySelector('button[onclick="postOk();"]')
+      if (passwordField) {
+        passwordField.addEventListener('keypress', event => {
+          if (event === 'Enter') {
+            this.log('info', 'Keyboard Enter - emitting credentials')
+            const password = document.querySelector('#password')?.value
+            const login = document.querySelector('#username')?.value
+            if (password && login) {
+              this.bridge.emit('workerEvent', {
+                event: 'loginSubmit',
+                payload: { login, password }
+              })
+            }
+          }
+        })
+      }
+      if (submitButton) {
+        submitButton.addEventListener('click', () => {
+          this.log('info', 'Button click - emitting credentials')
+          const password = document.querySelector('#password')?.value
+          const login = document.querySelector('#username')?.value
+          if (password && login) {
+            this.bridge.emit('workerEvent', {
+              event: 'loginSubmit',
+              payload: { login, password }
+            })
+          }
+        })
+      }
+    }
+    if (loginError) {
+      this.bridge.emit('workerEvent', {
+        event: 'loginError',
+        payload: { msg: loginError.innerHTML }
+      })
     }
   }
 
