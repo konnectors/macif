@@ -6,8 +6,8 @@ env:
   - MATTERMOST_CHANNEL=publication
   # MATTERMOST_HOOK_URL
   - secure: VtX15uRd3OobmCmKOmezY54yMar+erdmwGLrsaV7kOOM9/dzOU+YkAxZtnVhOb9nOFoHD5JZsuFAvIealk8/LMOSJjUCz2MNXBazdXtIIXTGWTcApzwjS1P7CAKiwUcAv9b2TIBvFxcxd1iVaJoLI7Q8S9nqT6qoKzDBXh+kzr4R9KrG1j34M56IcRGN7yux8XIeRGJBHQMYvn9Xs0Dqn+V2u34uvucK0a7Mi6NMU/waShOxR7CR09e9gEGZO2kgy7+rsXNqJbwkZ48845PfglhN25+eCHBQwFdjj87j/txQoRf2Iwr6vPIe74OBOGvq+lWKAEuGpG/U/zI3QoA9k/yJVcWGeEiQlr+y0qOvVMvPHw9T3KgFiGFe806eAgfpi7hnjoi93bEZP40NqSKM7WGIDpcrUUpzN0Ngi8TgMR+pEcyiiE0/UX5iJo3htCKc4N77eOmgiDPWSefg7wLLP95La8f9fYFvWRj5XB0tVpNqh8EqjIjxbfRskXcF3tZFypr/DclfFQbjT6M95zGVaUFZxWHFpguS4nxwaEI8vtQUf5Df3n2jPa3khAOghfGlqNxTRZC1cPxb4UhRaPMbfGerCIlO9Jknr+MKZRHTv9jxa0sk2WeOaooec0LmEWhIcmXNjNsmBUstSG07DgZoB8p91v5OHVtj0bWjz8EiIqI=
-  # REGISTRY_TOKEN slug=macif editor=cozy space=cozy_ccc
-  - secure: fmHcObkCngaB6bBI31GuvqvHgZ790mcxKW2TGep1ZMsKzqY8+b89P/NycWc/uKU2XqFwiS7a++CzBNrXn+TSUJGoqnWj32UwTY/3e5ydLOGptcT3T75Sga+Kmo+2nXLPeYGOaCxc5Fyap1w1ZbxaTUlBvaL7834f4kuzmrgJqV7s5KOZGQw/r7fnuMUbryILEQZ4wN7jgZOYA6q/rXq8IkEusJtnIiD7aLH03xz12FuZoXJQlt4t9WlNOvBxHY8hvaZu3Vu897m5qhs+9Jkprhk2CuhF7PsdxC/mtw+g2LCfiaUpHMCw9TdIn8advuM8NgDXCf39EaXNs7SM3a0mNlcHyR0Fbb+SYunk+xiZXGCweLXk8XWBSrQT76ZdBdB3+WxjPt3QJcfxwKBg/39crF/tGBBhIf1UMfEkQ69hlU1pcYhMgUNRFxDmq/T+ZtzP1BjQyzlDrh4uUrrXdcqBcGR7KTrz/a5FRv/cNfHswR7twJoSJ7M1Ncku00YVfW/S0Ja6sIekqQ3D7PO3kNtW6kjpKxLLNFLmggRbTZdPVwePzx5I/Fr5TxsBx8e8MM2ilG/MZzj//b2s6Cgu/X9LaZdGmK2D9YlGo27MoGdeWIDa8odVcQFjM9YRPKh8UL95chN/fSA9IrN9kw8gXrZxo6SORQQxT+rWxUWqToKcmqw=
+  # REGISTRY_TOKEN slug=macif editor=cozy space=default
+  - secure: TDmnv8k3CILLSkO2l9MKCWdfe6AIGJkkI+CfTH9Q14egwXjBHN9u4rtaJAGZ8WLUalPupw1MXujRJmACA5N1logHJji333TVLAI8Wwm8Wn1mt9Is0fdskQ7Ca2vbK8SRtzj5E6u1qx1wBq01645k7y6UIyLr0YoADS9BD1cEfS8tEQj7HdmPlzok7rR3co/EDM8oW8Js4MoHxx6u6QQWCVfh50TwTJGlu4RE9zpxAK29bCl/KYvWgRy9YKAwUBxfM2RCEOUug5f3gcPsFl+jvhQvWDojVTY24vLJI1vo+LNIwPvKoQr1kjsKrqV0hmj4j3golyjIY/0k4A7+IqFwY1OLIlGWxUjOW1uUbW35TuV/x0GgdzPzyaQjd0nokK/AQim7GBJHtvRqUuHPmmPYFpveN1/nwSJi8nye/RRgv3X4SnE45c45CqV4Hx8f4SSriC43Ngx8ZswPVtfNPSShYsRn0s05QQTCyxpalLwA6Q7AbDMUsyJCPlpBEMs+MWXG4+7mWSm2fMknaquRccS9Ea7JfIJu/gNlpEHdA/qQHkEbA6scsE7wp8Jb+qTq7xzCfxW0+oG1YpSdFRo1v8n+RFvF/aXOWaDkQYPjIhHesfUViePemUp4Pv97OKQ4IeoT3pLjhy7xR1mv9QSmrKaWv2Dat9ZfgdUPw4vXSiN4/MQ=
 cache:
   yarn: true
   directories:
@@ -22,14 +22,14 @@ script:
 deploy:
 - provider: script
   skip-cleanup: true
-  script: DEPLOY_BRANCH=build yarn deploy && yarn cozyPublish --space cozy_ccc
+  script: DEPLOY_BRANCH=build yarn deploy && yarn cozyPublish
   on:
     branch:
     - master
     - main
 - provider: script
   skip-cleanup: true
-  script: DEPLOY_BRANCH=build yarn deploy && yarn cozyPublish --postpublish mattermost --space cozy_ccc
+  script: DEPLOY_BRANCH=build yarn deploy && yarn cozyPublish --postpublish mattermost
   on:
     tags: true
 before_install:
