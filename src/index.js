@@ -130,7 +130,7 @@ class MacifContentScript extends ContentScript {
         try {
           // Full autoLogin is not possible on this website, there's a 2FA for each connection
           // So we're only prefilling and sending the form to reach the 2FA page.
-          await this.prefillAndSendLoginForm()
+          await this.prefillAndSendLoginForm(credentials)
           this.log('info', 'Prefill successful, waiting for 2FA ...')
         } catch {
           this.log(
@@ -230,6 +230,7 @@ class MacifContentScript extends ContentScript {
     } else {
       this.log('debug', 'Fill email field')
       await this.runInWorker('fillText', emailInputSelector, credentials.email)
+      await this.runInWorker('click', emailNextButtonSelector)
     }
 
     this.log('debug', 'Wait for password field')
