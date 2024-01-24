@@ -8,6 +8,7 @@ const log = Minilog('ContentScript')
 Minilog.enable('macifCCC')
 
 const baseUrl = 'https://www.macif.fr'
+const personnalInfosUrl = `${baseUrl}/assurance/particuliers/vos-espaces-macif/espace-assurance/infos-persos`
 // let FORCE_FETCH_ALL = false
 
 const xhrInterceptor = new XHRInterceptor()
@@ -129,7 +130,7 @@ class MacifContentScript extends ContentScript {
         try {
           // Full autoLogin is not possible on this website, there's a 2FA for each connection
           // So we're only prefilling and sending the form to reach the 2FA page.
-          await this.prefillAndSendLoginForm()
+          await this.prefillAndSendLoginForm(credentials)
           this.log('info', 'Prefill successful, waiting for 2FA ...')
         } catch {
           this.log(
@@ -229,6 +230,7 @@ class MacifContentScript extends ContentScript {
     } else {
       this.log('debug', 'Fill email field')
       await this.runInWorker('fillText', emailInputSelector, credentials.email)
+      await this.runInWorker('click', emailNextButtonSelector)
     }
 
     this.log('debug', 'Wait for password field')
@@ -292,17 +294,11 @@ class MacifContentScript extends ContentScript {
         '❌️ This account has nothing to fetch, aborting execution'
       )
     }
-    await this.clickAndWait(
-      'a[href="/assurance/particuliers/vos-espaces-macif/espace-assurance/infos-persos"]',
-      'a[href="/assurance/particuliers/vos-espaces-macif/espace-assurance/infos-persos/modifier-email"]'
-    )
-    await this.runInWorkerUntilTrue({
-      method: 'checkInterceptions',
-      args: ['personnalInfos']
-    })
-    await this.runInWorker('getIdentity')
-    if (this.store.userIdentity) {
-      return { sourceAccountIdentifier: this.store.userIdentity.email }
+    // Force sourceAccountIdentifier to be what's user inputs as credentials
+    const sourceAccountIdentifier =
+      this.store?.userCredentials.email || (await this.getCredentials()?.email)
+    if (sourceAccountIdentifier) {
+      return { sourceAccountIdentifier }
     } else {
       throw new Error(
         'No source account identifier found, the konnector should be fixed'
@@ -318,10 +314,6 @@ class MacifContentScript extends ContentScript {
     if (this.store.userCredentials) {
       this.log('info', 'Saving credentials ...')
       await this.saveCredentials(this.store.userCredentials)
-    }
-    if (this.store.userIdentity) {
-      this.log('info', 'Saving identity ...')
-      await this.saveIdentity({ contact: this.store.userIdentity })
     }
     await this.navigateToBillsPage()
     await this.runInWorkerUntilTrue({
@@ -366,6 +358,19 @@ class MacifContentScript extends ContentScript {
       qualificationLabel: 'other_invoice',
       subPath: "Avis d'échéances"
     })
+    await this.goto(personnalInfosUrl)
+    await this.waitForElementInWorker(
+      'a[href="/assurance/particuliers/vos-espaces-macif/espace-assurance/infos-persos/modifier-email"]'
+    )
+    await this.runInWorkerUntilTrue({
+      method: 'checkInterceptions',
+      args: ['personnalInfos']
+    })
+    await this.runInWorker('getIdentity')
+    if (this.store.userIdentity) {
+      this.log('info', 'Saving identity ...')
+      await this.saveIdentity({ contact: this.store.userIdentity })
+    }
   }
 
   async checkInterceptions(option) {
