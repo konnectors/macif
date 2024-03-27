@@ -2,7 +2,6 @@ import { ContentScript } from 'cozy-clisk/dist/contentscript'
 import Minilog from '@cozy/minilog'
 import waitFor, { TimeoutError } from 'p-wait-for'
 import { parse } from 'date-fns'
-import XHRInterceptor from './XHRinterceptor'
 import FetchInterceptor from './fetchInterceptor'
 const log = Minilog('ContentScript')
 Minilog.enable('macifCCC')
@@ -11,9 +10,7 @@ const baseUrl = 'https://www.macif.fr'
 const personnalInfosUrl = `${baseUrl}/assurance/particuliers/vos-espaces-macif/espace-assurance/infos-persos`
 // let FORCE_FETCH_ALL = false
 
-const xhrInterceptor = new XHRInterceptor()
 const fetchInterceptor = new FetchInterceptor()
-xhrInterceptor.init()
 fetchInterceptor.init()
 
 class MacifContentScript extends ContentScript {
@@ -295,8 +292,9 @@ class MacifContentScript extends ContentScript {
       )
     }
     // Force sourceAccountIdentifier to be what's user inputs as credentials
+    const savedCredentials = await this.getCredentials()
     const sourceAccountIdentifier =
-      this.store?.userCredentials.email || (await this.getCredentials()?.email)
+      this.store?.userCredentials?.email || savedCredentials?.email
     if (sourceAccountIdentifier) {
       return { sourceAccountIdentifier }
     } else {
@@ -379,8 +377,8 @@ class MacifContentScript extends ContentScript {
       () => {
         if (option === 'personnalInfos') {
           return Boolean(
-            xhrInterceptor.personnalInfos.length > 0 &&
-              xhrInterceptor.personIdentity.length > 0
+            fetchInterceptor.personnalInfos.length > 0 &&
+              fetchInterceptor.personIdentity.length > 0
           )
         }
         if (option === 'attestations') {
@@ -406,16 +404,16 @@ class MacifContentScript extends ContentScript {
 
   async getIdentity() {
     this.log('info', '📍️ getIdentity starts')
-    const infos = xhrInterceptor.personnalInfos[0].data
-    const identity = xhrInterceptor.personIdentity[0].data
+    const infos = fetchInterceptor.personnalInfos[0].data
+    const identity = fetchInterceptor.personIdentity[0].data
     const userIdentity = {
-      email: infos.znAdrEmail,
+      email: infos.compte.email.znAdrEmail,
       name: {
         givenName: identity.znPrenPers,
         familyName: identity.nmPers
       },
-      address: this.getAddresses(infos.adresses),
-      phone: this.getPhones(infos.telephones)
+      address: this.getAddresses(infos.macif.adresses),
+      phone: this.getPhones(infos.macif.telephones)
     }
     await this.sendToPilot({ userIdentity })
   }
