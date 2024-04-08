@@ -97,14 +97,21 @@ class MacifContentScript extends ContentScript {
     this.log('info', '🤖 navigateToLoginForm')
     await this.goto(baseUrl)
     await Promise.all([
-      this.waitForElementInWorker('#Part_Vos-espaces_EspAss'),
+      // The li is mandatory,otherwise there is another element found with
+      // this href but it's not corresping with the expected button
+      this.waitForElementInWorker(
+        'li > a[href="/assurance/particuliers/acceder-vos-espaces"]'
+      ),
       this.waitForElementInWorker(
         'a[href="https://agence.macif.fr/assurance/"]'
       )
     ])
-    await this.runInWorker('click', '#Part_Vos-espaces_EspAss')
+    await this.runInWorker(
+      'click',
+      'li > a[href="/assurance/particuliers/acceder-vos-espaces"]'
+    )
     await Promise.race([
-      this.waitForElementInWorker('#login'),
+      this.waitForElementInWorker('[id=":r0:"]'),
       this.waitForElementInWorker('button[data-logout]'),
       this.waitForElementInWorker('button', { includesText: 'Déconnexion' })
     ])
