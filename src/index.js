@@ -110,11 +110,9 @@ class MacifContentScript extends ContentScript {
       'click',
       'li > a[href="/assurance/particuliers/acceder-vos-espaces"]'
     )
-    await Promise.race([
-      this.waitForElementInWorker('[id=":r0:"]'),
-      this.waitForElementInWorker('button[data-logout]'),
-      this.waitForElementInWorker('button', { includesText: 'Déconnexion' })
-    ])
+    await this.runInWorkerUntilTrue({
+      method: 'checkAndWaitForLoginPageDetection'
+    })
   }
 
   async ensureAuthenticated({ account }) {
@@ -155,6 +153,17 @@ class MacifContentScript extends ContentScript {
       this.unblockWorkerInteractions()
       await this.show2FAFormAndWaitForInput()
     }
+    if (
+      await this.isElementInWorker('a[href="/espace-client?fromMire=true"]', {
+        includesText: 'Continuer vers mon espace'
+      })
+    ) {
+      this.log('info', 'StayConnectedButton found')
+      await this.clickAndWait(
+        'a[href="/espace-client?fromMire=true"]',
+        '.icon-deconnexion'
+      )
+    }
     this.unblockWorkerInteractions()
     return true
   }
@@ -164,12 +173,24 @@ class MacifContentScript extends ContentScript {
     await this.navigateToLoginForm()
     const authenticated = await this.runInWorker('checkAuthenticated')
     if (!authenticated) {
+      this.log('info', 'User is not authenticated')
       return true
     }
-    // For certain accounts, the profil button "#profil-avatar" doesn't exist.
-    // If so, the logout button is outside of the webview (you litteraly cannot see it or reach it to click it)
-    // but it exist in the HTML. Once clicked, the path is the same.
+    this.log('info', 'User is authenticated')
+    this.log(
+      'debug',
+      `this.store.stayConnected : ${JSON.stringify(this.store.stayConnected)}`
+    )
+    if (this.store.stayConnected) {
+      await this.clickAndWait(
+        '[href="/espace-client?fromMire=true"]',
+        '.icon-deconnexion'
+      )
+    }
     if (await this.isElementInWorker('#profil-avatar')) {
+      // For certain accounts, the profil button "#profil-avatar" doesn't exist.
+      // If so, the logout button is outside of the webview (you litteraly cannot see it or reach it to click it)
+      // but it exist in the HTML. Once clicked, the path is the same.
       this.log('debug', 'Avatar condition')
       await this.clickAndWait('#profil-avatar', 'button[data-logout]')
       await this.clickAndWait(
@@ -180,7 +201,9 @@ class MacifContentScript extends ContentScript {
       this.log('debug', 'supposed to click final logout button')
     } else {
       this.log('debug', 'Empty accounts condition')
-      await this.runInWorker('click', 'button', { includesText: 'Déconnexion' })
+      await this.runInWorker('click', 'button', {
+        includesText: 'Déconnexion'
+      })
       await this.waitForElementInWorker('button', {
         includesText: 'Se déconnecter'
       })
@@ -189,22 +212,31 @@ class MacifContentScript extends ContentScript {
         includesText: 'Se déconnecter'
       })
     }
-    await this.waitForElementInWorker('#mcf-sidebar-connexion')
+    await this.waitForElementInWorker('.mcf-navbar__nav')
     this.log('debug', 'supposed to have reach main page')
     return true
   }
 
   async checkAuthenticated() {
     this.log('info', '🤖 checkAuthenticated')
-    if (
-      document.querySelector('.auth-factor') ||
-      document.querySelector('#passcode')
-    ) {
+    const stayConnectedButton = document.querySelector(
+      '[href="/espace-client?fromMire=true"]'
+    )
+    const twoFAType = document.querySelector('.auth-factor')
+    const twoFAInputs = document.querySelector('#passcode')
+    if (twoFAType || twoFAInputs) {
       this.log('info', 'Login OK - 2FA needed, wait for user action')
       return true
     }
+    if (
+      stayConnectedButton &&
+      stayConnectedButton.textContent === 'Continuer vers mon espace'
+    ) {
+      this.log('info', 'stayConnected button detected')
+      return true
+    }
     return Boolean(
-      document.querySelector('button[data-logout]') ||
+      document.querySelector('.icon-deconnexion') ||
         document.querySelector('#rattacher-contrats')
     )
   }
@@ -298,6 +330,7 @@ class MacifContentScript extends ContentScript {
         '❌️ This account has nothing to fetch, aborting execution'
       )
     }
+
     // Force sourceAccountIdentifier to be what's user inputs as credentials
     const savedCredentials = await this.getCredentials()
     const sourceAccountIdentifier =
@@ -530,6 +563,52 @@ class MacifContentScript extends ContentScript {
     ])
   }
 
+  async checkAndWaitForLoginPageDetection() {
+    this.log('info', '📍️ checkAndWaitForLoginPageDetection starts')
+    await waitFor(
+      async () => {
+        const sumbitButton = document.querySelector('[id=":r1:"]')
+        const stayConnectedButton = document.querySelector(
+          '[href="/espace-client?fromMire=true"]'
+        )
+        if (sumbitButton) {
+          // Changes on the website now allows user to use a "stayConnected" button
+          // But every tries, the login input is displayed to the user for a brief moment before it detects user's active session and modifies the page
+          // Leading the Promise.race to resolve earlier than expected and the checkAuthenticated method to detect a false positive
+          // If this attributes is true, it means the website is loading the session so we're not really on the login step
+          const isDisabled = sumbitButton.getAttribute('aria-disabled')
+          // Returning value is a string "true"/"false", condition on an expected boolean wont work
+          if (isDisabled === 'true') {
+            this.log(
+              'info',
+              'loginPage sumbit button detected but disabled, checking stayConnected button'
+            )
+          } else {
+            this.log(
+              'info',
+              'loginPage sumbit button is enabled, first loginStep'
+            )
+            return true
+          }
+        }
+        if (
+          stayConnectedButton &&
+          stayConnectedButton.textContent === 'Continuer vers mon espace'
+        ) {
+          this.log('info', 'stayConnected button detected')
+          await this.sendToPilot({ stayConnected: true })
+          return true
+        }
+        return false
+      },
+      {
+        interval: 1000,
+        timeout: 30 * 1000
+      }
+    )
+    return true
+  }
+
   async getAttestations() {
     this.log('info', '📍️ getAttestations starts')
     const allAttestationsInfos = fetchInterceptor.attestationsInfos[0].data
@@ -644,7 +723,8 @@ connector
       'getIdentity',
       'getAttestations',
       'getPaymentSchedules',
-      'checkDomainChange'
+      'checkDomainChange',
+      'checkAndWaitForLoginPageDetection'
     ]
   })
   .catch(err => {
